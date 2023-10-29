@@ -1,4 +1,4 @@
-# Create a gif easily from a bunch of pictures in a a folder
+# Create a gif easily from a bunch of pictures in a folder
 
 ## Compile it
 ```
