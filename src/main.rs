@@ -1,6 +1,7 @@
 use image::DynamicImage;
 use image::imageops::{resize, FilterType};
 use std::fs;
+use std::time::Instant;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -9,6 +10,8 @@ fn main() {
     let files = fs::read_dir(folder_path).unwrap();
     let mut images: Vec<DynamicImage> = Vec::new();
 
+    println!("Reading images from: {}", folder_path);
+    let now = Instant::now();
     // Read JPEG files
     for file in files {
         let file_path = file.unwrap().path();
@@ -18,14 +21,16 @@ fn main() {
         let resized_img = DynamicImage::ImageRgba8(resized_img);
         images.push(resized_img);
     }
+    let elapsed = now.elapsed();
+    println!("Elapsed time for reading in {} images: {:.2?}", images.len(), elapsed);
 
-    // Convert JPEG images to a GIF
     let output_file_path = format!("{}/output.gif", output_path);
     let mut output_file = fs::File::create(output_file_path).unwrap();
     let mut encoder = gif::Encoder::new(&mut output_file, images[0].width() as u16, images[0].height() as u16, &[]).unwrap();
     encoder.set_repeat(gif::Repeat::Infinite).unwrap();
 
-    println!("Total images: {}", images.len());
+    println!("Creating gif");
+    let now = Instant::now();
     let mut i = 0;
     for img in &images {
         let mut palette = img.as_bytes().to_vec();
@@ -34,4 +39,6 @@ fn main() {
         encoder.write_frame(&frame).unwrap();
         i += 1;
     }
+    let elapsed = now.elapsed();
+    println!("Elapsed time for creating gif: {:.2?}", elapsed);
 }
