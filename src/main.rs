@@ -4,6 +4,7 @@ use std::fs;
 use std::time::Instant;
 use rayon::prelude::*;
 use std::io::BufWriter;
+use indicatif::ProgressIterator;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -13,6 +14,7 @@ fn main() {
 
     println!("Reading images from: {}", folder_path);
     let total = Instant::now();
+    let new_width: u32 = 500;
     // Read JPEG files and resize in parallel
     let images: Vec<ImageBuffer<image::Rgba<u8>, Vec<u8>>> = files
         .collect::<Result<Vec<_>, _>>()
@@ -21,7 +23,10 @@ fn main() {
         .map(|file| {
             let file_path = file.path();
             let img = image::open(&file_path).unwrap().into_rgba8();
-            let resized_img = resize(&img, 500, 500, FilterType::Lanczos3);
+            // preserve aspect ratio in resized image
+            let aspect_ratio = img.width() as f32 / img.height() as f32;
+            let new_height = (new_width as f32 / aspect_ratio) as u32;
+            let resized_img = resize(&img, new_width, new_height, FilterType::Lanczos3);
             resized_img
         })
         .collect();
@@ -36,9 +41,9 @@ fn main() {
 
     println!("Creating gif");
     let now = Instant::now();
-    for img in images.iter(){
+    for img in images.iter().progress(){
         let mut pixels = img.as_raw().to_vec();
-        let frame = gif::Frame::from_rgba_speed(img.width() as u16, img.height() as u16, &mut pixels, 5);
+        let frame = gif::Frame::from_rgba_speed(img.width() as u16, img.height() as u16, &mut pixels, 10);
         encoder.write_frame(&frame).unwrap();
     }
     let elapsed = now.elapsed();
