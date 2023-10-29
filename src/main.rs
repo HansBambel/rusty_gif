@@ -1,8 +1,9 @@
-use image::DynamicImage;
+use image::ImageBuffer;
 use image::imageops::{resize, FilterType};
 use std::fs;
 use std::time::Instant;
 use rayon::prelude::*;
+use std::io::BufWriter;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -11,39 +12,37 @@ fn main() {
     let files: fs::ReadDir = fs::read_dir(folder_path).unwrap();
 
     println!("Reading images from: {}", folder_path);
-    let now: Instant = Instant::now();
+    let total = Instant::now();
     // Read JPEG files and resize in parallel
-    let images: Vec<DynamicImage> = files
+    let images: Vec<ImageBuffer<image::Rgba<u8>, Vec<u8>>> = files
         .collect::<Result<Vec<_>, _>>()
         .unwrap()
         .into_par_iter()
         .map(|file| {
             let file_path = file.path();
-            let img = image::open(&file_path).unwrap();
+            let img = image::open(&file_path).unwrap().into_rgba8();
             let resized_img = resize(&img, 500, 500, FilterType::Lanczos3);
-            // convert back to DynamicImage
-            let resized_img = DynamicImage::ImageRgba8(resized_img);
             resized_img
         })
         .collect();
-    let elapsed = now.elapsed();
-    println!("Elapsed time for reading in {} images: {:.2?}", images.len(), elapsed);
+    let elapsed_reading = total.elapsed();
+    println!("Elapsed time for reading in {} images: {:.2?}", images.len(), elapsed_reading);
 
-    let output_file_path = format!("{}/output.gif", output_path);
-    let mut output_file = fs::File::create(output_file_path).unwrap();
-    let mut encoder = gif::Encoder::new(&mut output_file, images[0].width() as u16, images[0].height() as u16, &[]).unwrap();
+    let output_file_path: String = format!("{}/output.gif", output_path);
+    let output_file: fs::File = fs::File::create(output_file_path).unwrap();
+    let output: BufWriter<fs::File> = BufWriter::new(output_file);
+    let mut encoder: gif::Encoder<BufWriter<fs::File>> = gif::Encoder::new(output, images[0].width() as u16, images[0].height() as u16, &[]).unwrap();
     encoder.set_repeat(gif::Repeat::Infinite).unwrap();
 
     println!("Creating gif");
     let now = Instant::now();
-    let mut i = 0;
-    for img in &images {
-        let mut palette = img.as_bytes().to_vec();
-        println!("Image {}: {} {} {}", i, img.width(), img.height(), palette.len());
-        let frame = gif::Frame::from_rgba_speed(img.width() as u16, img.height() as u16, palette.as_mut_slice(), 5);
+    for (i, img) in images.iter().enumerate() {
+        let mut pixels = img.as_raw().to_vec();
+        let frame = gif::Frame::from_rgba_speed(img.width() as u16, img.height() as u16, &mut pixels, 5);
         encoder.write_frame(&frame).unwrap();
-        i += 1;
+        println!("Image {}: {} {}", i, img.width(), img.height());
     }
     let elapsed = now.elapsed();
     println!("Elapsed time for creating gif: {:.2?}", elapsed);
+    println!("Total time: {:.2?}", total.elapsed());
 }
