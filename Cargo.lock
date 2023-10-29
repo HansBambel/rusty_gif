@@ -206,6 +206,7 @@ dependencies = [
  "gif",
  "image",
  "imageproc",
+ "rayon",
 ]
 
 [[package]]

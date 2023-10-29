@@ -2,25 +2,30 @@ use image::DynamicImage;
 use image::imageops::{resize, FilterType};
 use std::fs;
 use std::time::Instant;
+use rayon::prelude::*;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let folder_path = &args[1];
-    let output_path = &args[2];
-    let files = fs::read_dir(folder_path).unwrap();
-    let mut images: Vec<DynamicImage> = Vec::new();
+    let folder_path: &String = &args[1];
+    let output_path: &String = &args[2];
+    let files: fs::ReadDir = fs::read_dir(folder_path).unwrap();
 
     println!("Reading images from: {}", folder_path);
-    let now = Instant::now();
-    // Read JPEG files
-    for file in files {
-        let file_path = file.unwrap().path();
-        let img = image::open(&file_path).unwrap();
-        let resized_img = resize(&img, 500, 500, FilterType::Lanczos3);
-        // Convert back to DynamicImage
-        let resized_img = DynamicImage::ImageRgba8(resized_img);
-        images.push(resized_img);
-    }
+    let now: Instant = Instant::now();
+    // Read JPEG files and resize in parallel
+    let images: Vec<DynamicImage> = files
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .into_par_iter()
+        .map(|file| {
+            let file_path = file.path();
+            let img = image::open(&file_path).unwrap();
+            let resized_img = resize(&img, 500, 500, FilterType::Lanczos3);
+            // convert back to DynamicImage
+            let resized_img = DynamicImage::ImageRgba8(resized_img);
+            resized_img
+        })
+        .collect();
     let elapsed = now.elapsed();
     println!("Elapsed time for reading in {} images: {:.2?}", images.len(), elapsed);
 
