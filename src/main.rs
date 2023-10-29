@@ -36,11 +36,10 @@ fn main() {
 
     println!("Creating gif");
     let now = Instant::now();
-    for (i, img) in images.iter().enumerate() {
+    for img in images.iter(){
         let mut pixels = img.as_raw().to_vec();
         let frame = gif::Frame::from_rgba_speed(img.width() as u16, img.height() as u16, &mut pixels, 5);
         encoder.write_frame(&frame).unwrap();
-        println!("Image {}: {} {}", i, img.width(), img.height());
     }
     let elapsed = now.elapsed();
     println!("Elapsed time for creating gif: {:.2?}", elapsed);
