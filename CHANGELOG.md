@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.2
+- Second argument ca nbe omitted.
+
 ## 0.1.1
 - Add progressbar.
 - Keep aspect-ratio of image.

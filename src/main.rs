@@ -9,7 +9,12 @@ use indicatif::ProgressIterator;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let folder_path: &String = &args[1];
-    let output_path: &String = &args[2];
+    // When second argument is not given assume current folder
+    let mut output_path = std::env::current_dir().unwrap().to_str().unwrap().to_string();
+    if args.len() == 3 {
+        output_path = args[2].clone();
+    }
+
     let files: fs::ReadDir = fs::read_dir(folder_path).unwrap();
 
     println!("Reading images from: {}", folder_path);
